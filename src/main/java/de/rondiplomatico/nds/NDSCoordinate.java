@@ -96,6 +96,21 @@ public class NDSCoordinate {
         latitude = lat;
         longitude = lon;
     }
+    
+    /*
+     * Compute midpoint of this and given NDSCoordinate
+     * 
+     * @param p
+     *          the given coordinate
+     */
+    public NDSCoordinate getMidpoint(NDSCoordinate p) {
+        double lat                          = p.toWGS84().getLatitude();
+        double lon                          = p.toWGS84().getLongitude();
+        WGS84Coordinate lonlat              = toWGS84();
+        double longitude                    = lonlat.getLongitude();
+        double latitude                     = lonlat.getLatitude();
+        return new NDSCoordinate(longitude + 0.5 * (lon - longitude), latitude + 0.5 * (lat - latitude));
+    }
 
     private void verify(int lon, int lat) {
         if (lat < MIN_LATITUDE || MAX_LATITUDE < lat) {
