@@ -30,14 +30,6 @@ public class NDSBBox {
     private final int south;
     private final int west;
 
-    // constructor to get global bounding box in NDS coordinates
-    public NDSBBox() {
-    	north =   90;
-    	east  =  180;
-    	south =  -90;
-    	west  = -180;
-    }
-
     /**
      * 
      * Gets the south west corner of the bounding box

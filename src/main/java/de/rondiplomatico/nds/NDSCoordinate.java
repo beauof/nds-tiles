@@ -98,18 +98,21 @@ public class NDSCoordinate {
     }
     
     /*
-     * Compute midpoint of this and given NDSCoordinate
+     * Computes a point along the distance of this and given NDSCoordinate
      * 
      * @param p
      *          the given coordinate
+     * @param fraction
+     *          the fraction
      */
-    public NDSCoordinate getMidpoint(NDSCoordinate p) {
+    public NDSCoordinate fractionBetween(NDSCoordinate p, double fraction) {
+        assert (0.0 <= fraction) && (fraction <= 1.0);
         double lat                          = p.toWGS84().getLatitude();
         double lon                          = p.toWGS84().getLongitude();
         WGS84Coordinate lonlat              = toWGS84();
         double longitude                    = lonlat.getLongitude();
         double latitude                     = lonlat.getLatitude();
-        return new NDSCoordinate(longitude + 0.5 * (lon - longitude), latitude + 0.5 * (lat - latitude));
+        return new NDSCoordinate(longitude + fraction * (lon - longitude), latitude + fraction * (lat - latitude));
     }
 
     private void verify(int lon, int lat) {

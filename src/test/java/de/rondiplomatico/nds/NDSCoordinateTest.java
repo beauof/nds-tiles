@@ -17,12 +17,15 @@ import lombok.ToString;
  * Test values are taken from the NDS Format Specification, Version 2.5.4.
  * 
  * @author Daniel Wirtz
+ * @author Andreas Hessenthaler
  * @since 20.02.2020
  */
 @Getter
 @ToString
 @EqualsAndHashCode
 public class NDSCoordinateTest {
+
+    private final double eps = 1E-7;
 
     @Test
     public void testConstructor() {
@@ -52,6 +55,50 @@ public class NDSCoordinateTest {
         assertEquals(new NDSCoordinate(180.0, 90.0), new NDSCoordinate(NDSCoordinate.MAX_LONGITUDE, NDSCoordinate.MAX_LATITUDE));
         assertEquals(new NDSCoordinate(-180.0, -90.0), new NDSCoordinate(NDSCoordinate.MIN_LONGITUDE, NDSCoordinate.MIN_LATITUDE));
         assertEquals(new NDSCoordinate(0.0, 0.0), new NDSCoordinate(0, 0));
+    }
+
+    @Test
+    public void testFractionBetweenWorks() {
+        // Tile 0
+        NDSTile t               = new NDSTile(0, 0);
+        NDSCoordinate c         = t.getCenter();
+        NDSBBox bb              = t.getBBox();
+        NDSCoordinate sw        = bb.southWest();
+        NDSCoordinate se        = bb.southEast();
+        NDSCoordinate ne        = bb.northEast();
+        NDSCoordinate nw        = bb.northWest();
+        NDSCoordinate csw       = sw.fractionBetween(c, 0.5);
+        NDSCoordinate cse       = se.fractionBetween(c, 0.5);
+        NDSCoordinate cne       = ne.fractionBetween(c, 0.5);
+        NDSCoordinate cnw       = nw.fractionBetween(c, 0.5);
+        assertEquals( 45.0, csw.toWGS84().getLongitude(), eps);
+        assertEquals(135.0, cse.toWGS84().getLongitude(), eps);
+        assertEquals( 45.0, cnw.toWGS84().getLongitude(), eps);
+        assertEquals(135.0, cne.toWGS84().getLongitude(), eps);
+        assertEquals(-45.0, csw.toWGS84().getLatitude(),  eps);
+        assertEquals(-45.0, cse.toWGS84().getLatitude(),  eps);
+        assertEquals( 45.0, cnw.toWGS84().getLatitude(),  eps);
+        assertEquals( 45.0, cne.toWGS84().getLatitude(),  eps);
+        // Tile 1
+        t                       = new NDSTile(0, 1);
+        c                       = t.getCenter();
+        bb                      = t.getBBox();
+        sw                      = bb.southWest();
+        se                      = bb.southEast();
+        ne                      = bb.northEast();
+        nw                      = bb.northWest();
+        csw                     = sw.fractionBetween(c, 0.5);
+        cse                     = se.fractionBetween(c, 0.5);
+        cne                     = ne.fractionBetween(c, 0.5);
+        cnw                     = nw.fractionBetween(c, 0.5);
+        assertEquals(-135.0, csw.toWGS84().getLongitude(), eps);
+        assertEquals( -45.0, cse.toWGS84().getLongitude(), eps);
+        assertEquals(-135.0, cnw.toWGS84().getLongitude(), eps);
+        assertEquals( -45.0, cne.toWGS84().getLongitude(), eps);
+        assertEquals( -45.0, csw.toWGS84().getLatitude(),  eps);
+        assertEquals( -45.0, cse.toWGS84().getLatitude(),  eps);
+        assertEquals(  45.0, cnw.toWGS84().getLatitude(),  eps);
+        assertEquals(  45.0, cne.toWGS84().getLatitude(),  eps);
     }
 
     /**

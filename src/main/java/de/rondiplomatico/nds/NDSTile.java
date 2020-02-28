@@ -122,28 +122,7 @@ public class NDSTile {
     }
 
     /**
-     * Get tile indices in x / y from id and level.
-     */
-    public int[] getTileXY() {
-        // variables for storing x/y-tile indices
-        int tileX, tileY;
-        tileX = tileY                       = -1;
-        // get tile size, assuming that there are 2x1 tiles on level 0
-        double tileSizeX, tileSizeY;
-        tileSizeX                           = 360.0 / (double) (Math.pow(2, level+1));
-        tileSizeY                           = 180.0 / (double) (Math.pow(2, level  ));
-        // get tile center and southwest corner
-        NDSCoordinate c                     = getCenter();
-        double lon                          = c.toWGS84().getLongitude() - 0.5 * tileSizeX;
-        double lat                          = c.toWGS84().getLatitude()  - 0.5 * tileSizeY;
-        // compute tile indices
-        tileX                               = (int) Math.round((lon + 180.0) / tileSizeX);
-        tileY                               = (int) Math.round((lat +  90.0) / tileSizeY);
-        return new int[] {tileX, tileY};
-    }
-
-    /**
-     * Get tile indices in x / y from given id and level.
+     * Get tile indices in x / y from given tile number and level.
      * 
      * @param level
      *                 the level
@@ -152,7 +131,21 @@ public class NDSTile {
      */
     public int[] getTileXYfromTileNumber(int level, int nr) {
         NDSTile tile                        = new NDSTile(level, nr);
-        return tile.getTileXY();
+        // variables for storing x/y-tile indices
+        int tileX, tileY;
+        tileX = tileY                       = -1;
+        // get tile size, assuming that there are 2x1 tiles on level 0
+        double tileSizeX, tileSizeY;
+        tileSizeX                           = 360.0 / (double) (Math.pow(2, level+1));
+        tileSizeY                           = 180.0 / (double) (Math.pow(2, level  ));
+        // get tile center and southwest corner
+        NDSCoordinate c                     = tile.getCenter();
+        double lon                          = c.toWGS84().getLongitude() - 0.5 * tileSizeX;
+        double lat                          = c.toWGS84().getLatitude()  - 0.5 * tileSizeY;
+        // compute tile indices
+        tileX                               = (int) Math.round((lon + 180.0) / tileSizeX);
+        tileY                               = (int) Math.round((lat +  90.0) / tileSizeY);
+        return new int[] {tileX, tileY};
     }
 
     /**
@@ -165,7 +158,7 @@ public class NDSTile {
      * @param tileY
      *                 the tile y-coordinate
      */
-    public int getTileNumberfromTileXY(int level, int tileX, int tileY) {
+    public int getTileNumberFromTileXY(int level, int tileX, int tileY) {
         // get tile size, assuming that there are 2x1 tiles on level 0
         double tileSizeX                    = 360.0 / (double) (Math.pow(2, level+1));
         double tileSizeY                    = 180.0 / (double) (Math.pow(2, level  ));
@@ -244,134 +237,6 @@ public class NDSTile {
     }
 
     /**
-     * Print map with labeled tiles.
-     * 
-     * @param level
-     *                 the level
-     * @param tiles
-     *                 the relevant tiles
-     * @param printType
-     *                 the print type (e.g., png or text)
-     * @param fileName
-     *                 the output filename
-     */
-    public void printMap(int level, int[] tiles, String printType, String fileName) {
-        // get number of tiles in x/y
-        int numTilesX                      = (int) Math.pow(2, level+1);
-        int numTilesY                      = (int) Math.pow(2, level  );
-        // print labeled cells
-        if (printType.equalsIgnoreCase("text")) {
-            if (level > 4) {
-                System.out.println(">>>WARNING: Writing to console won't give readable output. Skipping..");
-                return;
-            }
-            String header                  = new String(new char[(numTilesX+1)*2-1]).replace('\0', '-');
-            for (int idxY = numTilesY-1; idxY >= 0; idxY--) {
-                System.out.println(header);
-                for (int idxX = 0; idxX < numTilesX; idxX++) {
-                    int tileID             = getTileNumberfromTileXY(level, idxX, idxY);
-                    // print label
-                    // note: if check is quite inefficient..
-                    if (Arrays.stream(tiles).anyMatch(i -> i == tileID)) {
-                        System.out.print("|X");
-                    } else {
-                        System.out.print("| ");
-                    }
-                }
-                System.out.println("|");
-            }
-            System.out.println(header);
-        } else if (printType.equalsIgnoreCase("png")) {
-            if (level > 13) {
-                System.out.println(">>>WARNING: Required heap space is "+((long)numTilesX*(long)numTilesY*(long)4/(long)1024/(long)1024)+" MB.");
-                System.out.println(">>>WARNING: Writing to buffered image may fail due to limited heap space. Skipping..");
-                return;
-            }
-            // create image using default value for type int: 0
-            BufferedImage image            = new BufferedImage(numTilesX, numTilesY, BufferedImage.TYPE_INT_RGB);
-            for (int idx = 0; idx < tiles.length; idx++) {
-                int[] tileXY               = getTileXYfromTileNumber(level, tiles[idx]);
-                image.setRGB(tileXY[0], numTilesY-1-tileXY[1], -16000);
-            }
-            File ImageFile                 = new File(System.getProperty("user.home"), fileName+".png");
-            try {
-                ImageIO.write(image, "png", ImageFile);
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-        return;
-    }
-    
-    /**
-     * Compute a hash map from tile numbers.
-     * 
-     * @param level
-     *              the level
-     * @param tileNumbers
-     *              the tileNumbers
-     * @return
-     */
-    public Map<Integer, List<Integer>> tileNumbersToHM(int level, int[] tileNumbers){
-        // get the master tile number 0
-        NDSTile masterTile                 = new NDSTile(0, 0);
-        // create hashmap of (key, value) pairs, where key is tileY and val is tileX
-        //         note: val may contain multiple values
-        Map<Integer, List<Integer>> tileHM = new HashMap<Integer, List<Integer>>();
-        for (int ti = 0; ti < tileNumbers.length; ti++) {
-            int[] tileXY                   = getTileXYfromTileNumber(level, tileNumbers[ti]);
-            int key                        = tileXY[1];
-            int newVal                     = tileXY[0];
-            // if key already exists, add value to sorted list; else create new list
-            if (tileHM.containsKey(key)) {
-                List<Integer> prevList     = tileHM.get(key);
-                prevList.add(newVal);
-                Collections.sort(prevList);
-                tileHM.put(key, prevList);
-            } else {
-                List<Integer> newList      = new ArrayList<Integer>();
-                newList.add(newVal);
-                tileHM.put(key, newList);
-            }
-        }
-        return tileHM;
-    }
-    
-    /**
-     * Compute tile numbers from hash map.
-     * 
-     * @param level
-     *              the level
-     * @param hm
-     *              the hash map
-     * @return
-     */
-    public int[] hmToTileNumbers(int level, Map<Integer, List<Integer>> hm) {
-        NDSTile masterTile                 = new NDSTile(0, 0);
-        int numVals                        = getNumberOfValuesHM(hm);
-        int[] filledTileIDs                = new int[numVals];
-        int idx                            = 0;
-        for (Map.Entry<Integer, List<Integer>> entry : hm.entrySet()) {
-            int key                        = entry.getKey();
-            List<Integer> currList         = entry.getValue();
-            for (int idx0 = 0; idx0 < currList.size(); idx0++) {
-                filledTileIDs[idx]         = getTileNumberfromTileXY(level, currList.get(idx0), key);
-                idx++;
-            }
-        }
-        return filledTileIDs;
-    }
-    
-    
-    private int getNumberOfValuesHM(Map<Integer, List<Integer>> hm) {
-        int numVals                        = 0;
-        for (Map.Entry<Integer, List<Integer>> entry : hm.entrySet()) {
-            numVals                        = numVals + entry.getValue().size();
-        }
-        return numVals;
-    }
-
-    /**
      * Checks if the current Tile contains a certain coordinate.
      *
      * @param c
@@ -419,41 +284,24 @@ public class NDSTile {
         return center;
     }
     
-    /*
-     * Returns the corners of the tile
+    /**
+     * Get child tile for given number
      * 
-     * @param masterTile
-     *              the masterTile
+     * @param nr
+     *              the child tile number (SouthWest, SouthEast, NorthEast, NorthWest)
+     * @return
      */
-    public NDSCoordinate[] getCorners() {
-        NDSBBox bb = getBBox();
-        return new NDSCoordinate[] {bb.southWest(), bb.southEast(), bb.northEast(), bb.northWest()};
+    public NDSTile getChild(int nr) {
+        assert (0 <= nr) && (nr <= 3);
+        int childTileNumber                 = (tileNumber << 2) + nr;
+        if (nr == 2) {
+            childTileNumber                 = (tileNumber << 2) + 3;
+        } else if (nr == 3) {
+            childTileNumber                 = (tileNumber << 2) + 2;
+        }
+        return new NDSTile(level, childTileNumber);
     }
     
-    /*
-     * Return the child tile numbers
-     */
-    public int[] getChildTileNumbers() {
-        int id0                             = (tileNumber << 2);
-        return new int[] {id0, id0+1, id0+3, id0+2};
-    }
-    
-    public int getChildTileNumberSouthWest() {
-        return (tileNumber << 2);
-    }
-    
-    public int getChildTileNumberSouthEast() {
-        return (tileNumber << 2) + 1;
-    }
-    
-    public int getChildTileNumberNorthEast() {
-        return (tileNumber << 2) + 3;
-    }
-    
-    public int getChildTileNumberNorthWest() {
-        return (tileNumber << 2) + 2;
-    }
-
     /**
      * Creates a bounding box for the current tile.
      *
